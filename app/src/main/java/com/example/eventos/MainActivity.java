@@ -3,6 +3,7 @@ package com.example.eventos;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -10,13 +11,17 @@ import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.storage.FirebaseStorage;
 
 import static com.example.eventos.Comun.mostrarDialogo;
+import static com.example.eventos.Comun.storage;
+import static com.example.eventos.Comun.storageRef;
 import static com.example.eventos.EventosFirestore.EVENTOS;
 import static com.example.eventos.EventosFirestore.crearEventos;
 
@@ -28,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //  crearEventos();
+        String[] PERMISOS = {android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.GET_ACCOUNTS};
+
         Query query = FirebaseFirestore.getInstance().collection(EVENTOS).limit(50);
         FirestoreRecyclerOptions<Evento> opciones = new FirestoreRecyclerOptions.Builder<Evento>().setQuery(query, Evento.class).build();
         adaptador = new AdaptadorEventos(opciones);
@@ -60,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
                 context.startActivity(intent);
             }
         });
+
+        storage = FirebaseStorage.getInstance();
+        storageRef = storage.getReferenceFromUrl("gs://eventos-101aa.appspot.com");
     }
 
     @Override
@@ -91,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
             evento = evento + "Día: " + extras.getString("dia") + "\n";
             evento = evento + "Ciudad: " + extras.getString("ciudad") + "\n";
             evento = evento + "Comentario: " + extras.getString("comentario");
-            mostrarDialogo(getApplicationContext(), evento,null);
+            mostrarDialogo(getApplicationContext(), evento, null);
             for (String key : extras.keySet()) {
                 getIntent().removeExtra(key);
             }
@@ -118,6 +128,18 @@ public class MainActivity extends AppCompatActivity {
 
     public static Context getAppContext() {
         return MainActivity.getCurrentContext();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    Toast.makeText(MainActivity.this, "Has denegado algún permiso de la aplicación.", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+        }
     }
 
 }
