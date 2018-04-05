@@ -21,11 +21,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import com.google.firebase.perf.FirebasePerformance;
+import com.google.firebase.perf.metrics.Trace;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -46,7 +49,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.example.eventos.Comun.acercaDe;
 import static com.example.eventos.Comun.getStorageReference;
+import static com.example.eventos.Comun.mFirebaseAnalytics;
 import static com.example.eventos.Comun.mostrarDialogo;
 
 /**
@@ -69,6 +74,7 @@ public class EventoDetalles extends AppCompatActivity {
     //Tarea para subir las fotos....
     static UploadTask uploadTask = null;
     StorageReference imagenRef;
+    Trace mTrace;
 
 
     @Override
@@ -97,6 +103,12 @@ public class EventoDetalles extends AppCompatActivity {
         });
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        mFirebaseAnalytics.setUserProperty("evento_detalle", evento);
+
+        mTrace =
+                FirebasePerformance.getInstance().newTrace("trace_EventoDetalles");
+        mTrace.start();
 
 
     }
@@ -129,35 +141,51 @@ public class EventoDetalles extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_detalles, menu);
+        Log.i("PRemote", String.valueOf(acercaDe));
+
+        if (!acercaDe) {
+            menu.removeItem(R.id.action_acercaDe);
+        }
+
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         View vista = (View) findViewById(android.R.id.content);
+        Bundle bundle = new Bundle();
         int id = item.getItemId();
         switch (id) {
             case R.id.action_putData:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "subir_imagen");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 subirAFirebaseStorage(SOLICITUD_SUBIR_PUTDATA, null);
                 break;
             case R.id.action_streamData:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "subir_stream");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 seleccionarFotografiaDispositivo(vista, SOLICITUD_SELECCION_STREAM);
                 break;
             case R.id.action_putFile:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "subir_fichero");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 seleccionarFotografiaDispositivo(vista, SOLICITUD_SELECCION_PUTFILE);
                 break;
-
             case R.id.action_getFile:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "descargar_fichero");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 descargarDeFirebaseStorage(evento);
                 break;
-
             case R.id.action_fotografiasDrive:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "fotografias_drive");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 Intent intent = new Intent(getBaseContext(), FotografiasDrive.class);
                 intent.putExtra("evento", evento);
                 startActivity(intent);
                 break;
-
             case R.id.action_acercaDe:
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "acerca_de");
+                mFirebaseAnalytics.logEvent("menus", bundle);
                 Intent intentWeb = new Intent(getBaseContext(), EventosWeb.class);
                 intentWeb.putExtra("evento", evento);
                 startActivity(intentWeb);
@@ -390,6 +418,17 @@ public class EventoDetalles extends AppCompatActivity {
                 mostrarDialogo(getApplicationContext(), "Error al descargar el fichero.", null);
             }
         });
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        mTrace.start();
+    }
+    @Override
+    protected void onStop(){
+        super.onStop();
+        mTrace.stop();
     }
 
 }
